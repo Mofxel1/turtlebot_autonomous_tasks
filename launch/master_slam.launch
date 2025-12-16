@@ -1,0 +1,51 @@
+<launch>
+  <param name="/use_sim_time" value="false"/>
+
+  <node pkg="nodelet" type="nodelet" name="mobile_base_nodelet_manager" args="manager"/>
+  <node pkg="nodelet" type="nodelet" name="mobile_base" args="load kobuki_node/KobukiNodelet mobile_base_nodelet_manager">
+    <rosparam file="$(find kobuki_node)/param/base.yaml" command="load"/>
+    <param name="device_port" value="/dev/kobuki"/>
+    <remap from="mobile_base/odom" to="odom"/>
+    <remap from="mobile_base/enable" to="enable"/>
+    <remap from="mobile_base/disable" to="disable"/>
+    <remap from="mobile_base/joint_states" to="joint_states"/>
+    <remap from="mobile_base/commands/velocity" to="cmd_vel_mux/input/teleop"/>
+  </node>
+
+  <arg name="urdf_file" default="$(find xacro)/xacro '$(find kobuki_description)/urdf/kobuki_standalone.urdf.xacro'" />
+  <param name="robot_description" command="$(arg urdf_file)" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser" 
+        args="0.10 0 0.20 0 0 0 base_link laser 100" />
+
+  <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" output="screen">
+      <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
+      <param name="serial_baudrate"     type="int"    value="256000"/>
+      <param name="frame_id"            type="string" value="laser"/>
+      
+      <param name="inverted"            type="bool"   value="false"/>
+      
+      <param name="angle_compensate"    type="bool"   value="true"/>
+  </node>
+
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <param name="base_frame" value="base_footprint"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="map_frame"  value="map"/>
+    <param name="scan_topic" value="scan"/>
+    
+    <param name="minimumScore" value="50"/> 
+    <param name="map_update_interval" value="1.0"/>
+    <param name="maxUrange" value="6.0"/>
+    <param name="temporalUpdate" value="3.0"/>
+    <param name="linearUpdate" value="0.2"/>
+    <param name="angularUpdate" value="0.2"/>
+    <param name="particles" value="80"/>
+    <param name="delta" value="0.05"/>
+    <param name="xmin" value="-10.0"/>
+    <param name="ymin" value="-10.0"/>
+    <param name="xmax" value="10.0"/>
+    <param name="ymax" value="10.0"/>
+  </node>
+</launch>
